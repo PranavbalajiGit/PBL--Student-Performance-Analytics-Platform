@@ -1,75 +1,76 @@
 const express = require('express');
 const router = express.Router();
-const { users, sessions } = require('../data/mockData');
-const crypto = require('crypto');
+const User = require('../Models/User');
+const jwt = require('jsonwebtoken');
 
 // Login endpoint
-router.post('/login', (req, res) => {
-    const { username, password } = req.body;
+router.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
 
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Username and password are required' });
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+
+        // Find user
+        const user = await User.findOne({ username });
+
+        if (!user || user.password !== password) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        // Create JWT token
+        const token = jwt.sign(
+            { id: user.id, username: user.username, role: user.role, name: user.name, email: user.email },
+            process.env.SESSION_SECRET || 'student-analytics-mvp-secret-2024',
+            { expiresIn: '24h' }
+        );
+
+        // Set cookie
+        res.cookie('sessionId', token, {
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            sameSite: 'lax'
+        });
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                username: user.username,
+                name: user.name,
+                role: user.role,
+                email: user.email
+            },
+            redirectTo: `/${user.role}`
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Server error during login' });
     }
-
-    // Find user
-    const user = users.find(u => u.username === username && u.password === password);
-
-    if (!user) {
-        return res.status(401).json({ error: 'Invalid username or password' });
-    }
-
-    // Create session
-    const sessionId = crypto.randomBytes(32).toString('hex');
-    sessions.set(sessionId, {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        name: user.name,
-        email: user.email
-    });
-
-    // Set cookie
-    res.cookie('sessionId', sessionId, {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax'
-    });
-
-    res.json({
-        success: true,
-        user: {
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            role: user.role,
-            email: user.email
-        },
-        redirectTo: `/${user.role}`
-    });
 });
 
 // Logout endpoint
 router.post('/logout', (req, res) => {
-    const sessionId = req.cookies.sessionId;
-
-    if (sessionId && sessions.has(sessionId)) {
-        sessions.delete(sessionId);
-    }
-
     res.clearCookie('sessionId');
     res.json({ success: true, message: 'Logged out successfully' });
 });
 
 // Get current user
 router.get('/me', (req, res) => {
-    const sessionId = req.cookies.sessionId;
+    const token = req.cookies.sessionId;
 
-    if (!sessionId || !sessions.has(sessionId)) {
+    if (!token) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const user = sessions.get(sessionId);
-    res.json({ user });
+    try {
+        const decoded = jwt.verify(token, process.env.SESSION_SECRET || 'student-analytics-mvp-secret-2024');
+        res.json({ user: decoded });
+    } catch (error) {
+        res.clearCookie('sessionId');
+        res.status(401).json({ error: 'Session expired or invalid' });
+    }
 });
 
 module.exports = router;

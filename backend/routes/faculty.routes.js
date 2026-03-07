@@ -3,7 +3,10 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { facultyStudentMappings, users } = require('../data/mockData');
+
+const User = require('../Models/User');
+const FacultyStudentMapping = require('../Models/FacultyStudentMapping');
+
 const {
     validateMarksExcel,
     validatePSkillsExcel,
@@ -38,31 +41,34 @@ const upload = multer({
 });
 
 // Get mapped students for current faculty
-router.get('/students', (req, res) => {
-    const facultyId = req.user.id;
+router.get('/students', async (req, res) => {
+    try {
+        const facultyId = req.user.id;
+        const mapping = await FacultyStudentMapping.findOne({ facultyId });
 
-    const mapping = facultyStudentMappings.find(m => m.facultyId === facultyId);
+        if (!mapping || !mapping.studentIds || mapping.studentIds.length === 0) {
+            return res.json({ students: [] });
+        }
 
-    if (!mapping) {
-        return res.json({ students: [] });
-    }
-
-    const students = mapping.studentIds.map(id => {
-        const student = users.find(u => u.id === id);
-        return student ? {
+        const studentsRaw = await User.find({ id: { $in: mapping.studentIds }, role: 'student' }).lean();
+        
+        const students = studentsRaw.map(student => ({
             id: student.id,
             name: student.name,
             rollNumber: student.rollNumber,
             department: student.department,
             email: student.email
-        } : null;
-    }).filter(s => s !== null);
+        }));
 
-    res.json({ students });
+        res.json({ students });
+    } catch (error) {
+        console.error('Error fetching students:', error);
+        res.status(500).json({ error: 'Server error fetching mapped students' });
+    }
 });
 
 // Upload internal marks
-router.post('/upload/marks', upload.single('file'), (req, res) => {
+router.post('/upload/marks', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -80,8 +86,8 @@ router.post('/upload/marks', upload.single('file'), (req, res) => {
         }
 
         // Get faculty's mapped students
-        const mapping = facultyStudentMappings.find(m => m.facultyId === facultyId);
-        if (!mapping) {
+        const mapping = await FacultyStudentMapping.findOne({ facultyId });
+        if (!mapping || !mapping.studentIds) {
             fs.unlinkSync(filePath);
             return res.status(403).json({ error: 'You have no mapped students' });
         }
@@ -112,7 +118,7 @@ router.post('/upload/marks', upload.single('file'), (req, res) => {
 });
 
 // Upload P-Skills
-router.post('/upload/pskills', upload.single('file'), (req, res) => {
+router.post('/upload/pskills', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -128,8 +134,8 @@ router.post('/upload/pskills', upload.single('file'), (req, res) => {
             return res.status(400).json({ error: validation.error });
         }
 
-        const mapping = facultyStudentMappings.find(m => m.facultyId === facultyId);
-        if (!mapping) {
+        const mapping = await FacultyStudentMapping.findOne({ facultyId });
+        if (!mapping || !mapping.studentIds) {
             fs.unlinkSync(filePath);
             return res.status(403).json({ error: 'You have no mapped students' });
         }
@@ -157,7 +163,7 @@ router.post('/upload/pskills', upload.single('file'), (req, res) => {
 });
 
 // Upload activity/reward points
-router.post('/upload/points', upload.single('file'), (req, res) => {
+router.post('/upload/points', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -173,8 +179,8 @@ router.post('/upload/points', upload.single('file'), (req, res) => {
             return res.status(400).json({ error: validation.error });
         }
 
-        const mapping = facultyStudentMappings.find(m => m.facultyId === facultyId);
-        if (!mapping) {
+        const mapping = await FacultyStudentMapping.findOne({ facultyId });
+        if (!mapping || !mapping.studentIds) {
             fs.unlinkSync(filePath);
             return res.status(403).json({ error: 'You have no mapped students' });
         }
@@ -202,40 +208,50 @@ router.post('/upload/points', upload.single('file'), (req, res) => {
 });
 
 // Get analytics for a specific student
-router.get('/analytics/:studentId', (req, res) => {
-    const { studentId } = req.params;
-    const facultyId = req.user.id;
+router.get('/analytics/:studentId', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const facultyId = req.user.id;
 
-    // Verify student is mapped to this faculty
-    const mapping = facultyStudentMappings.find(m => m.facultyId === facultyId);
+        // Verify student is mapped to this faculty
+        const mapping = await FacultyStudentMapping.findOne({ facultyId });
 
-    if (!mapping || !mapping.studentIds.includes(studentId)) {
-        return res.status(403).json({ error: 'You do not have access to this student' });
+        if (!mapping || !mapping.studentIds || !mapping.studentIds.includes(studentId)) {
+            return res.status(403).json({ error: 'You do not have access to this student' });
+        }
+
+        const analytics = await getStudentAnalytics(studentId);
+
+        if (!analytics) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        res.json({ analytics });
+    } catch (error) {
+        console.error('Error fetching student analytics:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    const analytics = getStudentAnalytics(studentId);
-
-    if (!analytics) {
-        return res.status(404).json({ error: 'Student not found' });
-    }
-
-    res.json({ analytics });
 });
 
 // Get rankings for mapped students only
-router.get('/rankings', (req, res) => {
-    const facultyId = req.user.id;
+router.get('/rankings', async (req, res) => {
+    try {
+        const facultyId = req.user.id;
 
-    const mapping = facultyStudentMappings.find(m => m.facultyId === facultyId);
+        const mapping = await FacultyStudentMapping.findOne({ facultyId });
 
-    if (!mapping) {
-        return res.json({ rankings: [] });
+        if (!mapping || !mapping.studentIds || mapping.studentIds.length === 0) {
+            return res.json({ rankings: [] });
+        }
+
+        const allRankings = await generateRankings();
+        const facultyRankings = allRankings.filter(r => mapping.studentIds.includes(r.studentId));
+
+        res.json({ rankings: facultyRankings });
+    } catch (error) {
+        console.error('Error fetching faculty rankings:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    const allRankings = generateRankings();
-    const facultyRankings = allRankings.filter(r => mapping.studentIds.includes(r.studentId));
-
-    res.json({ rankings: facultyRankings });
 });
 
 module.exports = router;

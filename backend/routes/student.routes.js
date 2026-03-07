@@ -1,138 +1,192 @@
 const express = require('express');
 const router = express.Router();
-const {
-    academicMarks,
-    pSkills,
-    activityRewardPoints,
-    externalProfiles,
-    users
-} = require('../data/mockData');
-const { getStudentRank, getStudentAnalytics } = require('../utils/analytics');
+
+const User = require('../Models/User');
+const AcademicMarks = require('../Models/AcademicMarks');
+const PSkills = require('../Models/PSkills');
+const ActivityRewardPoints = require('../Models/ActivityRewardPoints');
+const ExternalProfile = require('../Models/ExternalProfile');
+
+const { getStudentRank, getStudentAnalytics, generateRankings } = require('../utils/analytics');
+
+// Get Top 20 Leaderboard
+router.get('/leaderboard', async (req, res) => {
+    try {
+        const rankings = await generateRankings();
+        const top20 = rankings.slice(0, 20);
+        res.json({ leaderboard: top20 });
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
 // Get student profile
-router.get('/profile', (req, res) => {
-    const studentId = req.user.id;
-    const student = users.find(u => u.id === studentId);
+router.get('/profile', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const student = await User.findOne({ id: studentId });
 
-    if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
-    }
-
-    res.json({
-        profile: {
-            id: student.id,
-            name: student.name,
-            email: student.email,
-            rollNumber: student.rollNumber,
-            department: student.department,
-            semester: student.semester
+        if (!student) {
+            return res.status(404).json({ error: 'Student not found' });
         }
-    });
+
+        res.json({
+            profile: {
+                id: student.id,
+                name: student.name,
+                email: student.email,
+                rollNumber: student.rollNumber,
+                department: student.department,
+                semester: student.semester
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching student profile:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
 // Get academic marks and trends
-router.get('/marks', (req, res) => {
-    const studentId = req.user.id;
-    const marks = academicMarks.find(m => m.studentId === studentId);
+router.get('/marks', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const marks = await AcademicMarks.findOne({ studentId });
 
-    if (!marks) {
-        return res.json({ marks: null, message: 'No marks data available' });
+        if (!marks) {
+            return res.json({ marks: null, message: 'No marks data available' });
+        }
+
+        res.json({ marks });
+    } catch (error) {
+        console.error('Error fetching marks:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.json({ marks });
 });
 
 // Get P-Skills
-router.get('/pskills', (req, res) => {
-    const studentId = req.user.id;
-    const skills = pSkills.find(s => s.studentId === studentId);
+router.get('/pskills', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const skills = await PSkills.findOne({ studentId });
 
-    if (!skills) {
-        return res.json({ skills: null, message: 'No P-Skills data available' });
+        if (!skills) {
+            return res.json({ skills: null, message: 'No P-Skills data available' });
+        }
+
+        res.json({ skills });
+    } catch (error) {
+        console.error('Error fetching pskills:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.json({ skills });
 });
 
 // Get activity and reward points
-router.get('/points', (req, res) => {
-    const studentId = req.user.id;
-    const points = activityRewardPoints.find(p => p.studentId === studentId);
+router.get('/points', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const points = await ActivityRewardPoints.findOne({ studentId });
 
-    if (!points) {
-        return res.json({ points: null, message: 'No activity/reward points available' });
+        if (!points) {
+            return res.json({ points: null, message: 'No activity/reward points available' });
+        }
+
+        res.json({ points });
+    } catch (error) {
+        console.error('Error fetching points:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.json({ points });
 });
 
 // Get privacy-aware rank
-router.get('/rank', (req, res) => {
-    const studentId = req.user.id;
-    const rankInfo = getStudentRank(studentId);
+router.get('/rank', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const rankInfo = await getStudentRank(studentId);
 
-    if (!rankInfo) {
-        return res.status(404).json({ error: 'Ranking data not available' });
+        if (!rankInfo) {
+            return res.status(404).json({ error: 'Ranking data not available' });
+        }
+
+        res.json({ rank: rankInfo });
+    } catch (error) {
+        console.error('Error generating rank:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.json({ rank: rankInfo });
 });
 
 // Connect external technical profiles (GitHub, LeetCode)
-router.post('/profiles', (req, res) => {
-    const studentId = req.user.id;
-    const { github, leetcode } = req.body;
+router.post('/profiles', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const { github, leetcode } = req.body;
 
-    // Find or create profile entry
-    let profile = externalProfiles.find(p => p.studentId === studentId);
+        // Find or create profile entry
+        let profile = await ExternalProfile.findOne({ studentId });
 
-    if (profile) {
-        // Update existing profile
-        if (github) profile.github = github;
-        if (leetcode) profile.leetcode = leetcode;
-    } else {
-        // Create new profile
-        externalProfiles.push({
-            studentId,
-            github: github || null,
-            leetcode: leetcode || null,
-            githubScore: 0, // Will be calculated in future
-            leetcodeScore: 0
+        if (profile) {
+            // Update existing profile
+            if (github !== undefined) profile.github = github;
+            if (leetcode !== undefined) profile.leetcode = leetcode;
+            await profile.save();
+        } else {
+            // Create new profile
+            profile = new ExternalProfile({
+                studentId,
+                github: github || null,
+                leetcode: leetcode || null,
+                githubScore: 0, // Will be calculated in future
+                leetcodeScore: 0
+            });
+            await profile.save();
+        }
+
+        res.json({
+            success: true,
+            message: 'External profiles updated successfully',
+            profiles: { github: profile.github, leetcode: profile.leetcode }
         });
+    } catch (error) {
+        console.error('Error updating profiles:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.json({
-        success: true,
-        message: 'External profiles updated successfully',
-        profiles: { github, leetcode }
-    });
 });
 
 // Get external profiles
-router.get('/profiles', (req, res) => {
-    const studentId = req.user.id;
-    const profile = externalProfiles.find(p => p.studentId === studentId);
+router.get('/profiles', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const profile = await ExternalProfile.findOne({ studentId });
 
-    if (!profile) {
-        return res.json({
-            profiles: null,
-            message: 'No external profiles connected'
-        });
+        if (!profile) {
+            return res.json({
+                profiles: null,
+                message: 'No external profiles connected'
+            });
+        }
+
+        res.json({ profiles: profile });
+    } catch (error) {
+        console.error('Error fetching profiles:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.json({ profiles: profile });
 });
 
 // Get complete analytics
-router.get('/analytics', (req, res) => {
-    const studentId = req.user.id;
-    const analytics = getStudentAnalytics(studentId);
+router.get('/analytics', async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        const analytics = await getStudentAnalytics(studentId);
 
-    if (!analytics) {
-        return res.status(404).json({ error: 'Analytics not available' });
+        if (!analytics) {
+            return res.status(404).json({ error: 'Analytics not available' });
+        }
+
+        res.json({ analytics });
+    } catch (error) {
+        console.error('Error fetching analytics:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.json({ analytics });
 });
 
 module.exports = router;

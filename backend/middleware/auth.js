@@ -1,16 +1,21 @@
-const { sessions } = require('../data/mockData');
+const jwt = require('jsonwebtoken');
 
-// Middleware to verify user session
+// Middleware to verify user session (now a JWT)
 const authenticate = (req, res, next) => {
-    const sessionId = req.cookies.sessionId;
+    const token = req.cookies.sessionId;
 
-    if (!sessionId || !sessions.has(sessionId)) {
+    if (!token) {
         return res.status(401).json({ error: 'Unauthorized. Please login.' });
     }
 
-    const userSession = sessions.get(sessionId);
-    req.user = userSession;
-    next();
+    try {
+        const decoded = jwt.verify(token, process.env.SESSION_SECRET || 'student-analytics-mvp-secret-2024');
+        req.user = decoded;
+        next();
+    } catch (error) {
+        res.clearCookie('sessionId');
+        return res.status(401).json({ error: 'Session expired or invalid. Please login again.' });
+    }
 };
 
 // Middleware to require admin role
