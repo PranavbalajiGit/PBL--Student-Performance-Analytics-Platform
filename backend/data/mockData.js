@@ -57,7 +57,7 @@ const users = [
     password: 'student123',
     role: 'student',
     name: 'Mukesh',
-    email: 'mukesh.cb23@bitsathy.ac.in',
+    email: 'mukesh.it23@bitsathy.ac.in',
     rollNumber: '7376232IT201',
     department: 'Information Technology',
     semester: 6
