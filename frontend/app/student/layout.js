@@ -97,6 +97,10 @@ export default function StudentLayout({ children }) {
                                 <span className="text-xl mr-3">🏆</span>
                                 <span>My Rank</span>
                             </Link>
+                            <Link href="/student/leaderboard" className="sidebar-link">
+                                <span className="text-xl mr-3">🥇</span>
+                                <span>Leaderboard</span>
+                            </Link>
                             <Link href="/student/profiles" className="sidebar-link">
                                 <span className="text-xl mr-3">🔗</span>
                                 <span>Connect Profiles</span>

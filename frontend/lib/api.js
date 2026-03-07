@@ -105,6 +105,9 @@ export const studentAPI = {
 
     getAnalytics: () =>
         api.get('/student/analytics'),
+
+    getLeaderboard: () =>
+        api.get('/student/leaderboard'),
 };
 
 // Error handler
