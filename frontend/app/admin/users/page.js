@@ -6,6 +6,8 @@ import { adminAPI } from '@/lib/api';
 export default function UsersPage() {
     const [users, setUsers] = useState([]);
     const [showForm, setShowForm] = useState(false);
+    const [showUploadForm, setShowUploadForm] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -38,6 +40,35 @@ export default function UsersPage() {
         });
     };
 
+    const handleFileChange = (e) => {
+        setSelectedFile(e.target.files[0]);
+    };
+
+    const handleBulkUpload = async (e) => {
+        e.preventDefault();
+        if (!selectedFile) {
+            setMessage({ type: 'error', text: 'Please select an Excel file' });
+            return;
+        }
+
+        setMessage({ type: '', text: '' });
+
+        try {
+            const response = await adminAPI.uploadUsers(selectedFile);
+            setMessage({ type: 'success', text: response.data.message || 'Users uploaded successfully' });
+            setSelectedFile(null);
+            e.target.reset(); // clear file input
+            fetchUsers();
+            setTimeout(() => setShowUploadForm(false), 2000);
+        } catch (error) {
+            setMessage({
+                type: 'error',
+                text: error.response?.data?.error || 'Failed to upload users',
+            });
+        }
+    };
+
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage({ type: '', text: '' });
@@ -69,13 +100,76 @@ export default function UsersPage() {
         <div>
             <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-900">User Management</h2>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="btn-primary"
-                >
-                    {showForm ? 'Cancel' : '+ Register New User'}
-                </button>
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => {
+                            setShowUploadForm(!showUploadForm);
+                            setShowForm(false);
+                            setMessage({ type: '', text: '' });
+                            setSelectedFile(null);
+                        }}
+                        className="btn-secondary bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors"
+                    >
+                        {showUploadForm ? 'Cancel' : 'Bulk Upload Users'}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setShowForm(!showForm);
+                            setShowUploadForm(false);
+                            setMessage({ type: '', text: '' });
+                        }}
+                        className="btn-primary"
+                    >
+                        {showForm ? 'Cancel' : '+ Register New User'}
+                    </button>
+                </div>
             </div>
+
+            {/* Bulk Upload Form */}
+            {showUploadForm && (
+                <div className="card mb-8">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                        Bulk Upload Users (Excel)
+                    </h3>
+                    <div className="text-sm text-gray-600 mb-4">
+                        Upload an Excel file (.xlsx, .xls) containing the users to register. The file must include columns: <strong>username, password, role, name, email</strong>. Role must be exactly <code>student</code> or <code>faculty</code>. Optional columns: <code>department, rollNumber, semester</code>.
+                    </div>
+
+                    {message.text && (
+                        <div
+                            className={`mb-4 p-4 rounded-lg ${message.type === 'success'
+                                    ? 'bg-green-50 text-green-700 border border-green-200'
+                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                }`}
+                        >
+                            {message.text}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleBulkUpload} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Select Excel File *
+                            </label>
+                            <input
+                                type="file"
+                                accept=".xlsx, .xls"
+                                required
+                                onChange={handleFileChange}
+                                className="block w-full text-sm text-gray-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-md file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-indigo-50 file:text-indigo-700
+                                  hover:file:bg-indigo-100 border border-gray-300 rounded-md p-2"
+                            />
+                        </div>
+                        <button type="submit" className="btn-primary" disabled={!selectedFile}>
+                            Upload Users
+                        </button>
+                    </form>
+                </div>
+            )}
 
             {/* Registration Form */}
             {showForm && (
