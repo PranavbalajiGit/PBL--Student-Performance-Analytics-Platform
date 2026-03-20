@@ -28,6 +28,14 @@ export const adminAPI = {
     registerUser: (userData) =>
         api.post('/admin/users', userData),
 
+    uploadUsers: (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/admin/upload/users', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+    },
+
     getUsers: (role) =>
         api.get('/admin/users', { params: { role } }),
 

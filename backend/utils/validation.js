@@ -169,6 +169,69 @@ const validatePointsExcel = (filePath) => {
 };
 
 /**
+ * Validate Excel file structure for bulk user upload
+ * Expected columns: username, password, role, name, email (optional: department, rollNumber, semester)
+ */
+const validateUsersExcel = (filePath) => {
+    try {
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(sheet);
+
+        if (data.length === 0) {
+            return { valid: false, error: 'Excel file is empty' };
+        }
+
+        const requiredColumns = ['username', 'password', 'role', 'name', 'email'];
+        const firstRow = data[0];
+        const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+
+        if (missingColumns.length > 0) {
+            return {
+                valid: false,
+                error: `Missing required columns: ${missingColumns.join(', ')}. Expected columns: ${requiredColumns.join(', ')}`
+            };
+        }
+
+        const validRoles = ['student', 'faculty'];
+
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+
+            if (!row['username'] || typeof row['username'] !== 'string') {
+                return { valid: false, error: `Invalid username at row ${i + 2}` };
+            }
+
+            if (!row['password']) {
+                return { valid: false, error: `Invalid password at row ${i + 2}` };
+            }
+
+            if (!row['role'] || !validRoles.includes(row['role'].toLowerCase())) {
+                return {
+                    valid: false,
+                    error: `Invalid role at row ${i + 2}. Must be 'student' or 'faculty'`
+                };
+            }
+            // Normalize role
+            row['role'] = row['role'].toLowerCase();
+
+            if (!row['name'] || typeof row['name'] !== 'string') {
+                return { valid: false, error: `Invalid name at row ${i + 2}` };
+            }
+
+            if (!row['email'] || typeof row['email'] !== 'string') {
+                return { valid: false, error: `Invalid email at row ${i + 2}` };
+            }
+        }
+
+        return { valid: true, data };
+    } catch (error) {
+        return { valid: false, error: `Failed to parse Excel file: ${error.message}` };
+    }
+};
+
+/**
  * Verify all students in Excel belong to the faculty's mapped students
  */
 const verifyStudentMapping = (excelData, mappedStudentIds) => {
@@ -189,5 +252,6 @@ module.exports = {
     validateMarksExcel,
     validatePSkillsExcel,
     validatePointsExcel,
-    verifyStudentMapping
+    verifyStudentMapping,
+    validateUsersExcel
 };

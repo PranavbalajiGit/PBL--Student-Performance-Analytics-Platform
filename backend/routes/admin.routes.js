@@ -3,6 +3,35 @@ const router = express.Router();
 const User = require('../Models/User');
 const FacultyStudentMapping = require('../Models/FacultyStudentMapping');
 const { getCampusAnalytics, generateRankings } = require('../utils/analytics');
+const { validateUsersExcel } = require('../utils/validation');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+
+const upload = multer({
+    storage,
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        if (ext !== '.xlsx' && ext !== '.xls') {
+            return cb(new Error('Only Excel files are allowed'));
+        }
+        cb(null, true);
+    }
+});
 
 // Register new user (student or faculty)
 router.post('/users', async (req, res) => {
@@ -57,6 +86,79 @@ router.post('/users', async (req, res) => {
     } catch (error) {
         console.error('Error creating user:', error);
         res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Bulk upload users
+router.post('/upload/users', upload.single('file'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const filePath = req.file.path;
+
+    try {
+        const validation = validateUsersExcel(filePath);
+
+        if (!validation.valid) {
+            fs.unlinkSync(filePath);
+            return res.status(400).json({ error: validation.error });
+        }
+
+        const data = validation.data;
+        const usernames = data.map(u => u.username);
+
+        // Check for duplicates in DB
+        const existingUsers = await User.find({ username: { $in: usernames } });
+        if (existingUsers.length > 0) {
+            fs.unlinkSync(filePath);
+            const duplicates = existingUsers.map(u => u.username).join(', ');
+            return res.status(409).json({ error: `Usernames already exist in database: ${duplicates}` });
+        }
+
+        // Get current counts to generate IDs appropriately
+        let studentCount = await User.countDocuments({ role: 'student' });
+        let facultyCount = await User.countDocuments({ role: 'faculty' });
+
+        const usersToInsert = data.map(user => {
+            let id;
+            if (user.role === 'student') {
+                studentCount++;
+                id = `student${studentCount}`;
+            } else {
+                facultyCount++;
+                id = `faculty${facultyCount}`;
+            }
+
+            return {
+                id,
+                username: user.username,
+                password: String(user.password),
+                role: user.role,
+                name: user.name,
+                email: user.email,
+                department: user.department || null,
+                rollNumber: user.role === 'student' ? user.rollNumber : undefined,
+                semester: user.role === 'student' ? user.semester : undefined
+            };
+        });
+
+        await User.insertMany(usersToInsert);
+
+        fs.unlinkSync(filePath);
+
+        res.status(201).json({
+            success: true,
+            message: `${usersToInsert.length} users registered successfully`,
+            usersProcessed: usersToInsert.length
+        });
+
+    } catch (error) {
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+        console.error('Error in bulk user upload:', error);
+        res.status(500).json({ error: 'Server error during upload: ' + error.message });
     }
 });
 
