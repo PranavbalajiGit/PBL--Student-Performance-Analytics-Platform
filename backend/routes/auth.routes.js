@@ -26,11 +26,17 @@ router.post('/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        // Cookie options for cross-domain support in production
+        const cookieOptions = {
+            httpOnly: true,
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: process.env.NODE_ENV === 'production'
+        };
+
         // Set cookie
         res.cookie('sessionId', token, {
-            httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            sameSite: 'lax'
+            ...cookieOptions,
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
 
         res.json({
@@ -52,7 +58,12 @@ router.post('/login', async (req, res) => {
 
 // Logout endpoint
 router.post('/logout', (req, res) => {
-    res.clearCookie('sessionId');
+    const cookieOptions = {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        secure: process.env.NODE_ENV === 'production'
+    };
+    res.clearCookie('sessionId', cookieOptions);
     res.json({ success: true, message: 'Logged out successfully' });
 });
 
@@ -68,7 +79,12 @@ router.get('/me', (req, res) => {
         const decoded = jwt.verify(token, process.env.SESSION_SECRET || 'student-analytics-mvp-secret-2024');
         res.json({ user: decoded });
     } catch (error) {
-        res.clearCookie('sessionId');
+        const cookieOptions = {
+            httpOnly: true,
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: process.env.NODE_ENV === 'production'
+        };
+        res.clearCookie('sessionId', cookieOptions);
         res.status(401).json({ error: 'Session expired or invalid' });
     }
 });
