@@ -6,6 +6,9 @@ const fs = require('fs');
 
 const User = require('../Models/User');
 const FacultyStudentMapping = require('../Models/FacultyStudentMapping');
+const AcademicMarks = require('../Models/AcademicMarks');
+const PSkills = require('../Models/PSkills');
+const ActivityRewardPoints = require('../Models/ActivityRewardPoints');
 
 const {
     validateMarksExcel,
@@ -100,8 +103,45 @@ router.post('/upload/marks', upload.single('file'), async (req, res) => {
             return res.status(403).json({ error: mappingValidation.error });
         }
 
-        // Process and store data (in real app, save to database)
-        // For MVP, just acknowledge success
+        // Process and save marks to database
+        const studentMarks = {};
+        validation.data.forEach(row => {
+            const sId = row['Student ID'];
+            if (!studentMarks[sId]) studentMarks[sId] = [];
+            studentMarks[sId].push({
+                name: row['Subject'],
+                marks: row['Marks'],
+                maxMarks: row['Max Marks']
+            });
+        });
+
+        for (const [sId, subjects] of Object.entries(studentMarks)) {
+            const student = await User.findOne({ id: sId, role: 'student' });
+            const semester = student && student.semester ? student.semester : 1;
+
+            let record = await AcademicMarks.findOne({ studentId: sId, semester });
+            if (!record) {
+                record = new AcademicMarks({ studentId: sId, semester, subjects: [] });
+            }
+
+            subjects.forEach(newSub => {
+                const existingIndex = record.subjects.findIndex(s => s.name === newSub.name);
+                if (existingIndex >= 0) {
+                    record.subjects[existingIndex].marks = newSub.marks;
+                    record.subjects[existingIndex].maxMarks = newSub.maxMarks;
+                } else {
+                    record.subjects.push(newSub);
+                }
+            });
+
+            if (record.subjects.length > 0) {
+                const totalMarks = record.subjects.reduce((sum, s) => sum + s.marks, 0);
+                const totalMax = record.subjects.reduce((sum, s) => sum + s.maxMarks, 0);
+                record.average = (totalMarks / totalMax) * 100;
+            }
+
+            await record.save();
+        }
         fs.unlinkSync(filePath); // Clean up after processing
 
         res.json({
@@ -147,6 +187,38 @@ router.post('/upload/pskills', upload.single('file'), async (req, res) => {
             return res.status(403).json({ error: mappingValidation.error });
         }
 
+        // Process and save P-Skills to database
+        const studentSkills = {};
+        validation.data.forEach(row => {
+            const sId = row['Student ID'];
+            if (!studentSkills[sId]) studentSkills[sId] = [];
+            studentSkills[sId].push({
+                name: row['Skill Name'],
+                level: row['Level'],
+                completionDate: new Date(row['Completion Date'] || Date.now())
+            });
+        });
+
+        for (const [sId, newSkills] of Object.entries(studentSkills)) {
+            let record = await PSkills.findOne({ studentId: sId });
+            if (!record) {
+                record = new PSkills({ studentId: sId, skills: [], totalCompleted: 0 });
+            }
+
+            newSkills.forEach(ns => {
+                const existingIndex = record.skills.findIndex(s => s.name === ns.name);
+                if (existingIndex >= 0) {
+                    record.skills[existingIndex].level = ns.level;
+                    record.skills[existingIndex].completionDate = ns.completionDate;
+                } else {
+                    record.skills.push(ns);
+                }
+            });
+
+            record.totalCompleted = record.skills.length;
+            await record.save();
+        }
+
         fs.unlinkSync(filePath);
 
         res.json({
@@ -190,6 +262,38 @@ router.post('/upload/points', upload.single('file'), async (req, res) => {
         if (!mappingValidation.valid) {
             fs.unlinkSync(filePath);
             return res.status(403).json({ error: mappingValidation.error });
+        }
+
+        // Process and save Points to database
+        const studentPoints = {};
+        validation.data.forEach(row => {
+            const sId = row['Student ID'];
+            if (!studentPoints[sId]) studentPoints[sId] = [];
+            studentPoints[sId].push({
+                type: row['Type'],
+                name: row['Description'],
+                points: row['Points'],
+                date: new Date(row['Date'] || Date.now())
+            });
+        });
+
+        for (const [sId, items] of Object.entries(studentPoints)) {
+            let record = await ActivityRewardPoints.findOne({ studentId: sId });
+            if (!record) {
+                record = new ActivityRewardPoints({ studentId: sId, activityPoints: 0, rewardPoints: 0, activities: [], rewards: [] });
+            }
+
+            items.forEach(item => {
+                if (item.type === 'Activity') {
+                    record.activities.push({ name: item.name, points: item.points, date: item.date });
+                    record.activityPoints += item.points;
+                } else {
+                    record.rewards.push({ name: item.name, points: item.points, date: item.date });
+                    record.rewardPoints += item.points;
+                }
+            });
+
+            await record.save();
         }
 
         fs.unlinkSync(filePath);
