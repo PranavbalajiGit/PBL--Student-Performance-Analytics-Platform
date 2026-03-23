@@ -43,6 +43,27 @@ const upload = multer({
     }
 });
 
+/**
+ * @swagger
+ * tags:
+ *   name: Faculty
+ *   description: Faculty operations
+ */
+
+/**
+ * @swagger
+ * /api/faculty/students:
+ *   get:
+ *     summary: Get mapped students for current faculty
+ *     tags: [Faculty]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of mapped students
+ *       500:
+ *         description: Server error
+ */
 // Get mapped students for current faculty
 router.get('/students', async (req, res) => {
     try {
@@ -70,6 +91,34 @@ router.get('/students', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/faculty/upload/marks:
+ *   post:
+ *     summary: Upload academic marks via Excel file
+ *     tags: [Faculty]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Marks uploaded successfully
+ *       400:
+ *         description: Invalid file or data
+ *       403:
+ *         description: Unauthorized or generic mapping error
+ *       500:
+ *         description: Server error
+ */
 // Upload internal marks
 router.post('/upload/marks', upload.single('file'), async (req, res) => {
     if (!req.file) {
@@ -157,6 +206,34 @@ router.post('/upload/marks', upload.single('file'), async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/faculty/upload/pskills:
+ *   post:
+ *     summary: Upload P-Skills via Excel file
+ *     tags: [Faculty]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: P-Skills uploaded successfully
+ *       400:
+ *         description: Invalid file or data
+ *       403:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Upload P-Skills
 router.post('/upload/pskills', upload.single('file'), async (req, res) => {
     if (!req.file) {
@@ -234,6 +311,34 @@ router.post('/upload/pskills', upload.single('file'), async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/faculty/upload/points:
+ *   post:
+ *     summary: Upload activity/reward points via Excel file
+ *     tags: [Faculty]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Points uploaded successfully
+ *       400:
+ *         description: Invalid file or data
+ *       403:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Upload activity/reward points
 router.post('/upload/points', upload.single('file'), async (req, res) => {
     if (!req.file) {
@@ -311,6 +416,31 @@ router.post('/upload/points', upload.single('file'), async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/faculty/analytics/{studentId}:
+ *   get:
+ *     summary: Get analytics for a specific student
+ *     tags: [Faculty]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the student
+ *     responses:
+ *       200:
+ *         description: Analytics data for the student
+ *       403:
+ *         description: Access denied to this student
+ *       404:
+ *         description: Student not found
+ *       500:
+ *         description: Server error
+ */
 // Get analytics for a specific student
 router.get('/analytics/:studentId', async (req, res) => {
     try {
@@ -337,6 +467,20 @@ router.get('/analytics/:studentId', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/faculty/rankings:
+ *   get:
+ *     summary: Get rankings for mapped students only
+ *     tags: [Faculty]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Rankings of mapped students
+ *       500:
+ *         description: Server error
+ */
 // Get rankings for mapped students only
 router.get('/rankings', async (req, res) => {
     try {

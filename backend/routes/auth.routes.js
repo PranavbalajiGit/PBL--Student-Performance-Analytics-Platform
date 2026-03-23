@@ -3,6 +3,45 @@ const router = express.Router();
 const User = require('../Models/User');
 const jwt = require('jsonwebtoken');
 
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication API
+ */
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: User login
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: admin
+ *               password:
+ *                 type: string
+ *                 example: "123"
+ *     responses:
+ *       200:
+ *         description: Successful login
+ *       400:
+ *         description: Missing credentials
+ *       401:
+ *         description: Invalid credentials
+ *       500:
+ *         description: Server error
+ */
 // Login endpoint
 router.post('/login', async (req, res) => {
     try {
@@ -56,6 +95,16 @@ router.post('/login', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: User logout
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ */
 // Logout endpoint
 router.post('/logout', (req, res) => {
     const cookieOptions = {
@@ -67,6 +116,20 @@ router.post('/logout', (req, res) => {
     res.json({ success: true, message: 'Logged out successfully' });
 });
 
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current logged in user
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user information
+ *       401:
+ *         description: Not authenticated or session expired
+ */
 // Get current user
 router.get('/me', (req, res) => {
     const token = req.cookies.sessionId;

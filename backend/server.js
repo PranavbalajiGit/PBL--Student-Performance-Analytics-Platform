@@ -12,6 +12,8 @@ const adminRoutes = require('./routes/admin.routes');
 const facultyRoutes = require('./routes/faculty.routes');
 const studentRoutes = require('./routes/student.routes');
 const { authenticate, requireAdmin, requireFaculty, requireStudent } = require('./middleware/auth');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,6 +34,9 @@ app.use(cookieParser());
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Student Performance Analytics API is running' });
 });
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Public routes
 app.use('/api/auth', authRoutes);

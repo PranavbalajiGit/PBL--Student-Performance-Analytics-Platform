@@ -9,6 +9,27 @@ const ExternalProfile = require('../Models/ExternalProfile');
 
 const { getStudentRank, getStudentAnalytics, generateRankings } = require('../utils/analytics');
 
+/**
+ * @swagger
+ * tags:
+ *   name: Student
+ *   description: Student operations
+ */
+
+/**
+ * @swagger
+ * /api/student/leaderboard:
+ *   get:
+ *     summary: Get top 20 student leaderboard
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Top 20 leaderboard data
+ *       500:
+ *         description: Server error
+ */
 // Get Top 20 Leaderboard
 router.get('/leaderboard', async (req, res) => {
     try {
@@ -21,6 +42,22 @@ router.get('/leaderboard', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/profile:
+ *   get:
+ *     summary: Get current student profile
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Student profile data
+ *       404:
+ *         description: Student not found
+ *       500:
+ *         description: Server error
+ */
 // Get student profile
 router.get('/profile', async (req, res) => {
     try {
@@ -47,6 +84,20 @@ router.get('/profile', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/marks:
+ *   get:
+ *     summary: Get academic marks and trends for current student
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Academic marks
+ *       500:
+ *         description: Server error
+ */
 // Get academic marks and trends
 router.get('/marks', async (req, res) => {
     try {
@@ -64,6 +115,20 @@ router.get('/marks', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/pskills:
+ *   get:
+ *     summary: Get P-Skills for current student
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: P-Skills data
+ *       500:
+ *         description: Server error
+ */
 // Get P-Skills
 router.get('/pskills', async (req, res) => {
     try {
@@ -81,6 +146,20 @@ router.get('/pskills', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/points:
+ *   get:
+ *     summary: Get activity and reward points for current student
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Points data
+ *       500:
+ *         description: Server error
+ */
 // Get activity and reward points
 router.get('/points', async (req, res) => {
     try {
@@ -98,6 +177,22 @@ router.get('/points', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/rank:
+ *   get:
+ *     summary: Get privacy-aware rank for current student
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Rank information
+ *       404:
+ *         description: Ranking data not available
+ *       500:
+ *         description: Server error
+ */
 // Get privacy-aware rank
 router.get('/rank', async (req, res) => {
     try {
@@ -115,6 +210,31 @@ router.get('/rank', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/profiles:
+ *   post:
+ *     summary: Connect external technical profiles
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               github:
+ *                 type: string
+ *               leetcode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: External profiles updated successfully
+ *       500:
+ *         description: Server error
+ */
 // Connect external technical profiles (GitHub, LeetCode)
 router.post('/profiles', async (req, res) => {
     try {
@@ -152,6 +272,20 @@ router.post('/profiles', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/profiles:
+ *   get:
+ *     summary: Get external profiles
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: External profiles
+ *       500:
+ *         description: Server error
+ */
 // Get external profiles
 router.get('/profiles', async (req, res) => {
     try {
@@ -172,6 +306,22 @@ router.get('/profiles', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/student/analytics:
+ *   get:
+ *     summary: Get complete analytics for current student
+ *     tags: [Student]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Student analytics data
+ *       404:
+ *         description: Analytics not available
+ *       500:
+ *         description: Server error
+ */
 // Get complete analytics
 router.get('/analytics', async (req, res) => {
     try {

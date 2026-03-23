@@ -33,6 +33,61 @@ const upload = multer({
     }
 });
 
+/**
+ * @swagger
+ * tags:
+ *   name: Admin
+ *   description: Administrative operations
+ */
+
+/**
+ * @swagger
+ * /api/admin/users:
+ *   post:
+ *     summary: Register a new user (student or faculty)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *               - role
+ *               - name
+ *               - email
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [student, faculty]
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               department:
+ *                 type: string
+ *               rollNumber:
+ *                 type: string
+ *               semester:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Missing required fields or invalid role
+ *       409:
+ *         description: Username already exists
+ *       500:
+ *         description: Server error
+ */
 // Register new user (student or faculty)
 router.post('/users', async (req, res) => {
     try {
@@ -89,6 +144,34 @@ router.post('/users', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/admin/upload/users:
+ *   post:
+ *     summary: Bulk upload users via Excel file
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Users registered successfully
+ *       400:
+ *         description: No file uploaded or invalid data
+ *       409:
+ *         description: Usernames already exist in database
+ *       500:
+ *         description: Server error
+ */
 // Bulk upload users
 router.post('/upload/users', upload.single('file'), async (req, res) => {
     if (!req.file) {
@@ -162,6 +245,27 @@ router.post('/upload/users', upload.single('file'), async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [student, faculty]
+ *         description: Filter users by role
+ *     responses:
+ *       200:
+ *         description: List of users
+ *       500:
+ *         description: Server error
+ */
 // Get all users
 router.get('/users', async (req, res) => {
     try {
@@ -184,6 +288,40 @@ router.get('/users', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/admin/mappings:
+ *   post:
+ *     summary: Create or update faculty-student mapping
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - facultyId
+ *               - studentIds
+ *             properties:
+ *               facultyId:
+ *                 type: string
+ *               studentIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Mapping updated successfully
+ *       400:
+ *         description: Invalid input or missing fields
+ *       404:
+ *         description: Faculty or student not found
+ *       500:
+ *         description: Server error
+ */
 // Create faculty-student mapping
 router.post('/mappings', async (req, res) => {
     try {
@@ -231,6 +369,20 @@ router.post('/mappings', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/admin/mappings:
+ *   get:
+ *     summary: Get all faculty-student mappings
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all mappings with details
+ *       500:
+ *         description: Server error
+ */
 // Get all mappings
 router.get('/mappings', async (req, res) => {
     try {
@@ -272,6 +424,20 @@ router.get('/mappings', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/admin/analytics:
+ *   get:
+ *     summary: Get campus-wide analytics
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Campus analytics data
+ *       500:
+ *         description: Server error
+ */
 // Get campus-wide analytics
 router.get('/analytics', async (req, res) => {
     try {
@@ -283,6 +449,20 @@ router.get('/analytics', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/admin/rankings:
+ *   get:
+ *     summary: Get full student rankings
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Student rankings
+ *       500:
+ *         description: Server error
+ */
 // Get full rankings (admin only)
 router.get('/rankings', async (req, res) => {
     try {
